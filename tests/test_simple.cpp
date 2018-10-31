@@ -4,8 +4,13 @@
 #define CATCH_CONFIG_WINDOWS_CRTDBG
 #endif
 
+
+#include <filesystem>
+
 #include <catch.hpp>
 #include <fmilib.hpp>
+
+namespace fs = std::filesystem;
 
 std::string temp_dir;
 std::string fmu_dir;
@@ -22,7 +27,10 @@ jm_callbacks jm_cb
 TEST_CASE("Simple", "[Integration]")
 {
     temp_dir = temp_dir + "/CoupledClutches";
+    fs::create_directory(temp_dir);
+
     fmilib::fmi2_t m(fmu_dir, temp_dir, fmu_cb, jm_cb);
+    
 }
 
 int main(int argc, char *argv[])

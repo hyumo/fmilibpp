@@ -5,14 +5,14 @@
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
 
-     * Redistributions of source code must retain the above copyright notice,
-       this list of conditions and the following disclaimer.
-     * Redistributions in binary form must reproduce the above copyright
-       notice, this list of conditions and the following disclaimer in the
-       documentation and/or other materials provided with the distribution.
-     * Neither the name of  nor the names of its contributors may be used to
-       endorse or promote products derived from this software without specific
-       prior written permission.
+    * Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+    * Neither the name of  nor the names of its contributors may be used to
+    endorse or promote products derived from this software without specific
+    prior written permission.
 
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
     AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -29,26 +29,18 @@
 
 #pragma once
 
-#include <algorithm>
+
 #include <array>
-#include <memory>
-#include <optional>
-#include <utility>
 #include <vector>
+#include <memory>
+#include <utility>
+#include <optional>
+#include <algorithm>
 
 #include <fmilib.h>
 
 namespace fmilib
 {
-
-using real_type = fmi2_real_t;
-using integer_type = fmi2_integer_t;
-using boolean_type = bool;
-using string_type = std::string;
-using enum_type = fmi2_integer_t;
-using size_type = std::size_t;
-using vr_type = fmi2_value_reference_t;
-
 class variable_t
 {
 private:
@@ -66,7 +58,8 @@ public:
      * @brief get variable name
      * @return variable name
      */
-    string_type name() const noexcept
+    template <typename T = fmi2_string_t>
+    T name() const noexcept
     {
         return fmi2_import_get_variable_name(_v);
     }
@@ -75,7 +68,8 @@ public:
      * @brief get variable description
      * @return variable description
      */
-    string_type description() const noexcept
+    template <typename T = fmi2_string_t>
+    T description() const noexcept
     {
         return fmi2_import_get_variable_description(_v);
     }
@@ -83,7 +77,7 @@ public:
      * @brief get variable value reference
      * @return value reference
      */
-    vr_type vr() const noexcept
+    fmi2_value_reference_t vr() const noexcept
     {
         return fmi2_import_get_variable_vr(_v);
     }
@@ -104,7 +98,7 @@ public:
      * @retval true variable contains start value
      * @retval false variable does not contain start value
      */
-    boolean_type has_start() const noexcept
+    bool has_start() const noexcept
     {
         return fmi2_import_get_variable_has_start(_v);
     }
@@ -135,7 +129,7 @@ public:
         return variable_t(fmi2_import_get_previous(_v));
     }
 
-    boolean_type can_handle_multiple_set_per_time_instant() const noexcept
+    bool can_handle_multiple_set_per_time_instant() const noexcept
     {
         return fmi2_import_get_canHandleMultipleSetPerTimeInstant(_v);
     }
@@ -145,7 +139,7 @@ public:
         return fmi2_import_get_variable_alias_kind(_v);
     }
 
-    size_type original_order() const noexcept
+    std::size_t original_order() const noexcept
     {
         return fmi2_import_get_variable_original_order(_v);
     }
@@ -167,11 +161,14 @@ private:
     fmi2_import_real_variable_t *_v;
 
 public:
+    /**
+     * @brief delete default ctor
+     */
     real_variable_t() = delete;
-    /** @brief delete default ctor */
+
     explicit real_variable_t(fmi2_import_real_variable_t *v) : _v{v} {}
 
-    real_type start() const noexcept
+    double start() const noexcept
     {
         return fmi2_import_get_real_variable_start(_v);
     }
@@ -185,22 +182,22 @@ public:
         return real_variable_t(s);
     }
 
-    boolean_type reinit() const noexcept
+    bool reinit() const noexcept
     {
         return fmi2_import_get_real_variable_reinit(_v);
     }
 
-    real_type max() const noexcept
+    double max() const noexcept
     {
         return fmi2_import_get_real_variable_max(_v);
     }
 
-    real_type min() const noexcept
+    double min() const noexcept
     {
         return fmi2_import_get_real_variable_min(_v);
     }
 
-    real_type nominal() const noexcept
+    double nominal() const noexcept
     {
         return fmi2_import_get_real_variable_nominal(_v);
     }
@@ -220,17 +217,17 @@ public:
 
     explicit integer_variable_t(fmi2_import_integer_variable_t *v) : _v{v} {}
 
-    integer_type start() const noexcept
+    int start() const noexcept
     {
         return fmi2_import_get_integer_variable_start(_v);
     }
 
-    integer_type min() const noexcept
+    int min() const noexcept
     {
         return fmi2_import_get_integer_variable_min(_v);
     }
 
-    integer_type max() const noexcept
+    int max() const noexcept
     {
         return fmi2_import_get_integer_variable_max(_v);
     }
@@ -246,17 +243,17 @@ public:
     /** @brief delete default ctor */
     explicit enum_variable_t(fmi2_import_enum_variable_t *v) : _v{v} {}
 
-    enum_type start() const noexcept
+    int start() const noexcept
     {
         return fmi2_import_get_enum_variable_start(_v);
     }
 
-    enum_type min() const noexcept
+    int min() const noexcept
     {
         return fmi2_import_get_enum_variable_min(_v);
     }
 
-    enum_type max() const noexcept
+    int max() const noexcept
     {
         return fmi2_import_get_enum_variable_max(_v);
     }
@@ -272,7 +269,8 @@ public:
     /** @brief delete default ctor */
     explicit string_variable_t(fmi2_import_string_variable_t *v) : _v{v} {}
 
-    string_type start() const noexcept
+    template <typename T = fmi2_string_t>
+    T start() const noexcept
     {
         return fmi2_import_get_string_variable_start(_v);
     }
@@ -288,7 +286,7 @@ public:
     /** @brief delete default ctor */
     explicit bool_variable_t(fmi2_import_bool_variable_t *v) : _v{v} {}
 
-    boolean_type start() const noexcept
+    bool start() const noexcept
     {
         return fmi2_import_get_boolean_variable_start(_v);
     }
@@ -303,12 +301,14 @@ public:
 
     explicit variable_typedef_t(fmi2_import_variable_typedef_t *vt) : _vt{vt} {}
 
-    string_type type_name() const noexcept
+    template <typename T = std::string>
+    T type_name() const noexcept
     {
         return fmi2_import_get_type_name(_vt);
     }
 
-    string_type type_description() const noexcept
+    template <typename T = std::string>
+    T type_description() const noexcept
     {
         return fmi2_import_get_type_description(_vt);
     }
@@ -318,7 +318,8 @@ public:
         return fmi2_import_get_base_type(_vt);
     }
 
-    string_type type_quantity() const noexcept
+    template <typename T = std::string>
+    T type_quantity() const noexcept
     {
         return fmi2_import_get_type_quantity(_vt);
     }
@@ -347,7 +348,7 @@ public:
         return variable_typedef_t{vt};
     }
 
-    size_type size() const noexcept
+    std::size_t size() const noexcept
     {
         return fmi2_import_get_type_definition_number(_td);
     }
@@ -373,7 +374,7 @@ public:
     /**
      * @brief Size of the variable list
      */
-    size_type size() const noexcept
+    std::size_t size() const noexcept
     {
         return fmi2_import_get_variable_list_size(_vl.get());
     }
@@ -400,13 +401,22 @@ public:
      * @warning This function only makes sure fmi2_value_reference_t array gets
      * deallocated, so, avoid using this function if possible.
      */
-    std::unique_ptr<const vr_type> value_reference_list() const noexcept
+    std::unique_ptr<const unsigned int> value_reference_list() const noexcept
     {
-        return std::unique_ptr<const vr_type>(
+        return std::unique_ptr<const unsigned int>(
             fmi2_import_get_value_referece_list(_vl.get()));
     }
 
-    std::optional<variable_t> operator[](size_type index) const noexcept
+    std::vector<unsigned int> vrs() const noexcept
+    {
+        std::vector<unsigned int> ret;
+        auto vr_ptr = fmi2_import_get_value_referece_list(_vl.get());
+        ret.assign(vr_ptr, vr_ptr + size());
+        delete vr_ptr; //?
+        return ret;
+    }
+
+    std::optional<variable_t> operator[](std::size_t index) const noexcept
     {
         auto v = fmi2_import_get_variable(_vl.get(), index);
         if (!v) {
@@ -415,8 +425,8 @@ public:
         return variable_t{v};
     }
 
-    std::optional<variable_list_t> sublist(size_type from, size_type to) const
-        noexcept
+    std::optional<variable_list_t> sublist(std::size_t from,
+                                           std::size_t to) const noexcept
     {
         auto vl = fmi2_import_get_sublist(_vl.get(), from, to);
         if (!vl) {
@@ -492,17 +502,17 @@ public:
     /**
      * @brief Display unit name
      */
-    string_type name() const noexcept
+    std::string name() const noexcept
     {
         return fmi2_import_get_display_unit_name(_du);
     }
 
-    real_type factor() const noexcept
+    double factor() const noexcept
     {
         return fmi2_import_get_display_unit_factor(_du);
     }
 
-    real_type offset() const noexcept
+    double offset() const noexcept
     {
         return fmi2_import_get_display_unit_offset(_du);
     }
@@ -515,8 +525,8 @@ public:
      * @param isRelativeQuantity specifies if "offset" should be incorporated
      * into conversion
      */
-    real_type convert_to_display_unit(real_type value,
-                                      bool isRelativeQuantity) const noexcept
+    double convert_to_display_unit(double value, bool isRelativeQuantity) const
+        noexcept
     {
         return fmi2_import_convert_to_display_unit(
             value, _du, static_cast<int>(isRelativeQuantity));
@@ -530,8 +540,8 @@ public:
      * @param isRelativeQuantity specifies if "offset" should be incorporated
      * into conversion
      */
-    real_type convert_from_display_unit(real_type value,
-                                        bool isRelativeQuantity) const noexcept
+    double convert_from_display_unit(double value,
+                                     bool isRelativeQuantity) const noexcept
     {
         return fmi2_import_convert_from_display_unit(
             value, _du, static_cast<int>(isRelativeQuantity));
@@ -546,12 +556,12 @@ private:
 public:
     explicit unit_t(fmi2_import_unit_t *u) : _u{u} {}
 
-    string_type name() const noexcept
+    std::string name() const noexcept
     {
         return fmi2_import_get_unit_name(_u);
     }
 
-    size_type display_unit_size() const noexcept
+    std::size_t display_unit_size() const noexcept
     {
         return fmi2_import_get_unit_display_unit_number(_u);
     }
@@ -584,7 +594,7 @@ public:
         return fmi2_import_convert_from_SI_base_unit(value, _u);
     }
 
-    display_unit_t display_unit(size_type index) const noexcept
+    display_unit_t display_unit(std::size_t index) const noexcept
     {
         return display_unit_t{fmi2_import_get_unit_display_unit(_u, index)};
     }
@@ -598,7 +608,7 @@ private:
 public:
     explicit unit_definitions_t(fmi2_import_unit_definitions_t *ud) : _ud{ud} {}
 
-    size_type size() const noexcept
+    std::size_t size() const noexcept
     {
         return fmi2_import_get_unit_definitions_number(_ud);
     }
@@ -712,7 +722,8 @@ public:
      */
     fmi2_t(fmi2_t &&m) = default;
 
-    string_type model_name() const noexcept
+    template <typename T = std::string>
+    T model_name() const noexcept
     {
         return fmi2_import_get_model_name(_fmu.get());
     }
@@ -722,52 +733,62 @@ public:
         return fmi2_import_get_capability(_fmu.get(), id);
     }
 
-    string_type identifier_me() const noexcept
+    template <typename T = std::string>
+    T identifier_me() const noexcept
     {
         return fmi2_import_get_model_identifier_ME(_fmu.get());
     }
 
-    string_type identifier_cs() const noexcept
+    template <typename T = std::string>
+    T identifier_cs() const noexcept
     {
         return fmi2_import_get_model_identifier_CS(_fmu.get());
     }
 
-    string_type GUID() const noexcept
+    template <typename T = std::string>
+    T GUID() const noexcept
     {
         return fmi2_import_get_GUID(_fmu.get());
     }
 
-    string_type description() const noexcept
+    template <typename T = std::string>
+    T description() const noexcept
     {
         return fmi2_import_get_description(_fmu.get());
     }
 
-    string_type author() const noexcept
+    template <typename T = std::string>
+    T author() const noexcept
     {
         return fmi2_import_get_author(_fmu.get());
     }
 
-    string_type copyright() const noexcept
+    template <typename T = std::string>
+    T copyright() const noexcept
     {
         return fmi2_import_get_copyright(_fmu.get());
     }
 
-    string_type license() const noexcept
+    template <typename T = std::string>
+    T license() const noexcept
     {
         return fmi2_import_get_license(_fmu.get());
     }
 
-    string_type standard_version() const noexcept
+    template <typename T = std::string>
+    T standard_version() const noexcept
     {
         return fmi2_import_get_model_standard_version(_fmu.get());
     }
 
-    string_type generation_tool() const noexcept
+    template <typename T = std::string>
+    T generation_tool() const noexcept
     {
         return fmi2_import_get_generation_tool(_fmu.get());
     }
 
-    string_type generation_date_and_time() const noexcept
+    template <typename T = std::string>
+    T generation_date_and_time() const noexcept
     {
         return fmi2_import_get_generation_date_and_time(_fmu.get());
     }
@@ -875,7 +896,8 @@ public:
         return fmi2_import_get_vendors_num(_fmu.get());
     }
 
-    string_type vendor_name(size_type index) const noexcept
+    template <typename T = std::string>
+    T vendor_name(size_type index) const noexcept
     {
         return fmi2_import_get_vendor_name(_fmu.get(), index);
     }
@@ -885,12 +907,14 @@ public:
         return fmi2_import_get_log_categories_num(_fmu.get());
     }
 
-    string_type log_category(size_type index) const noexcept
+    template <typename T = std::string>
+    T log_category(size_type index) const noexcept
     {
         return fmi2_import_get_log_category(_fmu.get(), index);
     }
 
-    string_type log_category_description(size_type index) const noexcept
+    template <typename T = std::string>
+    T log_category_description(size_type index) const noexcept
     {
         return fmi2_import_get_log_category_description(_fmu.get(), index);
     }
@@ -900,7 +924,8 @@ public:
         return fmi2_import_get_source_files_me_num(_fmu.get());
     }
 
-    string_type source_file_me(size_type index) const noexcept
+    template <typename T = std::string>
+    T source_file_me(size_type index) const noexcept
     {
         return fmi2_import_get_source_file_me(_fmu.get(), index);
     }
@@ -910,7 +935,8 @@ public:
         return fmi2_import_get_source_files_cs_num(_fmu.get());
     }
 
-    string_type source_file_cs(size_type index) const noexcept
+    template <typename T = std::string>
+    T source_file_cs(size_type index) const noexcept
     {
         return fmi2_import_get_source_file_cs(_fmu.get(), index);
     }
@@ -1006,7 +1032,7 @@ public:
         fmi2_import_free(_fmu.get());
     }
 
-    template <typename T = const char *>
+    template <typename T = std::string>
     T get_version() const noexcept
     {
         return fmi2_import_get_version(_fmu.get());
@@ -1031,15 +1057,33 @@ public:
         return set_debug_logging(logging_on, c_cats.size(), c_cats.data());
     }
 
-    fmi2_status_t setup_experiment(fmi2_boolean_t tolerance_defined,
-                                   fmi2_real_t tolerance,
-                                   fmi2_real_t start_time,
-                                   fmi2_boolean_t stop_time_defined,
-                                   fmi2_real_t stop_time)
+    fmi2_status_t setup_experiment(bool tolerance_defined, double tolerance,
+                                   double start_time, bool stop_time_defined,
+                                   double stop_time) noexcept
     {
         return fmi2_import_setup_experiment(_fmu.get(), tolerance_defined,
                                             tolerance, start_time,
                                             stop_time_defined, stop_time);
+    }
+
+    fmi2_status_t enter_initialization_mode() noexcept
+    {
+        return fmi2_import_enter_initialization_mode(_fmu.get());
+    }
+
+    fmi2_status_t exit_initialization_mode() noexcept
+    {
+        return fmi2_import_exit_initialization_mode(_fmu.get());
+    }
+
+    fmi2_status_t terminate() noexcept
+    {
+        return fmi2_import_terminate();
+    }
+
+    fmi2_status_t reset() noexcept
+    {
+        return fmi2_import_reset();
     }
 
     ///////////////////////////////////////////////////////////////////////////

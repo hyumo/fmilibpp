@@ -6,7 +6,7 @@ link_libraries(Catch fmilib++)
 #------------------------------------------------------------------------------
 # FMU locations
 #------------------------------------------------------------------------------
-SET(CoupledClutch_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../fmus/CoupledClutches.fmu)
+SET(CoupledClutch_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../fmus/${FMILIBRARY_CPP_PLATFORM}/CoupledClutches.fmu)
 #------------------------------------------------------------------------------
 # FMU Temp Locations
 #------------------------------------------------------------------------------
