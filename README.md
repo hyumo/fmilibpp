@@ -3,6 +3,8 @@
 
 A header only modern c++ wrapper for FMILibrary. Still WIP.
 
+C++17 compiler is required. 
+
 # How to use 
 
 Just copy and paste `fmilib.hpp` file into your project then include it.
