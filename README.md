@@ -9,7 +9,6 @@ Just copy and paste `fmilib.hpp` file into your project then include the header 
 
 ```C++
 
-#include <string>
 #include "fmilib.hpp"
 
 int main()
