@@ -23,7 +23,7 @@ int main()
         = {malloc, calloc, realloc, free, jm_default_logger, jm_log_level_debug,
            nullptr};
 
-    auto m = fmilib::fmi2_me_t(fmu_path, temp_dir, fmu_cb, jm_cb);
+    fmilib::fmi2_me_t m(fmu_path, temp_dir, fmu_cb, jm_cb);
     std::cout << m.model_name() << '\n';
     std::cout << m.GUID() << '\n';
 }
