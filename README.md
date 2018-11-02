@@ -13,11 +13,8 @@ A header only modern c++ wrapper for FMILibrary. Still WIP.
 
 int main()
 {
-    // FMU location
     std::string fmu_path = "C:/CoupledClutches.fmu";
-    // Temp folder
     std::string temp_dir = "C:/temp";
-    //
     fmi2_callback_functions_t fmu_cb
         = {fmi2_log_forwarding, calloc, free, nullptr, nullptr};
     jm_callbacks jm_cb
