@@ -13,7 +13,7 @@ SET(CoupledClutch_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../fmus/${FMILIBRARY_CPP_PLATF
 SET(TEMP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../temp)
 file(MAKE_DIRECTORY ${TEMP_DIR})
 
-set(TEST_FILTER "[Integration]")
+set(TEST_FILTER "[CoupledClutches]")
 
 add_executable(test_simple test_simple.cpp)
 add_test(
