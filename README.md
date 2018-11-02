@@ -5,10 +5,11 @@ A header only modern c++ wrapper for FMILibrary. Still WIP.
 
 # How to use 
 
+Just copy and paste `fmilib.hpp` file into your project then include the header file.
+
 ```C++
 
 #include <string>
-
 #include "fmilib.hpp"
 
 int main()
