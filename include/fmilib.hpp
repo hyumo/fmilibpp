@@ -31,6 +31,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -569,12 +570,15 @@ public:
         return variable_list_t{vl};
     }
 
-    variable_list_t
+    std::optional<variable_list_t>
     filter_variables(fmi2_import_variable_filter_function_ft filter,
                      void *context) const noexcept
     {
-        return variable_list_t{
-            fmi2_import_filter_variables(_vl.get(), filter, context)};
+        auto vl = fmi2_import_filter_variables(_vl.get(), filter, context);
+        if (!vl) {
+            return {};
+        }
+        return variable_list_t{vl};
     }
 
     static std::optional<variable_list_t>
@@ -632,9 +636,16 @@ public:
     }
 };
 
-template <bool is_model_exchange = true>
+template <bool is_model_exchange = true, bool addon = false>
 class fmi2_t
 {
+private:
+    static int _is_input(fmi2_import_variable_t *vl, void *data)
+    {
+        return (fmi2_causality_enu_input == fmi2_import_get_causality(vl)) ? 1
+                                                                           : 0;
+    }
+
 protected:
     /** @brief fmu object */
     std::unique_ptr<fmi2_import_t, decltype(&fmi2_import_free)> _fmu;
@@ -1062,11 +1073,113 @@ public:
         fmi2_import_collect_model_counts(_fmu.get(), counts);
     }
 
-    void expand_variable_references(const char *msgIn, char *msgOut,
-                                    size_t maxMsgSize) const noexcept
+    void expand_variable_references(const char *msg_in, char *msg_out,
+                                    size_t max_msg_size) const noexcept
     {
-        fmi2_import_expand_variable_references(_fmu.get(), msgIn, msgOut,
-                                               maxMsgSize);
+        fmi2_import_expand_variable_references(_fmu.get(), msg_in, msg_out,
+                                               max_msg_size);
+    }
+
+    std::optional<variable_list_t> input_list() const noexcept
+    {
+        auto vl = variable_list(0);
+        if (!vl) {
+            return {}; // Empty variable list?
+        }
+
+        auto input_vl = vl.value().filter_variables(_is_input);
+        return input_vl.value_or({});
+    }
+
+    fmi2_boolean_t has_input() const noexcept
+    {
+        return input_list().has_value() ? fmi2_true : fmi2_false;
+    }
+
+    fmi2_boolean_t has_output() const noexcept
+    {
+        return output_list().has_value() ? fmi2_true : fmi2_false;
+    }
+
+    fmi2_boolean_t has_continuous_states() const noexcept
+    {
+        return number_of_continuous_states() > 0 ? fmi2_true : fmi2_false;
+    }
+
+    fmi2_boolean_t has_event_indicators() const noexcept
+    {
+        return number_of_event_indicators() > 0 ? fmi2_true : fmi2_false;
+    }
+
+    size_t number_of_inputs() const noexcept
+    {
+        return input_list().value_or(0).size();
+    }
+
+    template <fmi2_boolean_t needsExecutionTool,
+              fmi2_boolean_t completedIntegratorStepNotNeeded,
+              fmi2_boolean_t canBeInstantiatedOnlyOncePerProcess,
+              fmi2_boolean_t canNotUseMemoryManagementFunctions,
+              fmi2_boolean_t canGetAndSetFMUstate,
+              fmi2_boolean_t canSerializeFMUstate,
+              fmi2_boolean_t providesDirectionalDerivatives>
+    fmi2_boolean_t is_me_capability_matched() const noexcept
+    {
+        std::bitset<7> cap(127);
+        if constexpr (needsExecutionTool == fmi2_true)
+            cap[0] = capability(fmi2_me_needsExecutionTool);
+        if constexpr (completedIntegratorStepNotNeeded == fmi2_true)
+            cap[1] = capability(fmi2_me_completedEventIterationIsProvided);
+        if constexpr (canBeInstantiatedOnlyOncePerProcess == fmi2_true)
+            cap[2] = capability(fmi2_me_canBeInstantiatedOnlyOncePerProcess);
+        if constexpr (canNotUseMemoryManagementFunctions == fmi2_true)
+            cap[3] = capability(fmi2_me_canNotUseMemoryManagementFunctions);
+        if constexpr (canGetAndSetFMUstate == fmi2_true)
+            cap[4] = capability(fmi2_me_canGetAndSetFMUstate);
+        if constexpr (canSerializeFMUstate == fmi2_true)
+            cap[5] = capability(fmi2_me_canSerializeFMUstate);
+        if constexpr (providesDirectionalDerivatives == fmi2_true)
+            cap[6] = capability(fmi2_me_providesDirectionalDerivatives);
+
+        return cap.all();
+    }
+
+    template <fmi2_boolean_t needsExecutionTool,
+              fmi2_boolean_t canHandleVariableCommunicationStepSize,
+              fmi2_boolean_t canInterpolateInputs,
+              fmi2_integer_t maxOutputDerivativeOrder,
+              fmi2_boolean_t canRunAsynchronuously,
+              fmi2_boolean_t canBeInstantiatedOnlyOncePerProcess,
+              fmi2_boolean_t canNotUseMemoryManagementFunctions,
+              fmi2_boolean_t canGetAndSetFMUstate,
+              fmi2_boolean_t canSerializeFMUstate,
+              fmi2_boolean_t providesDirectionalDerivatives>
+    fmi2_boolean_t is_cs_capability_matched() const noexcept
+    {
+        std::bitset<10> cap(1023);
+        if constexpr (needsExecutionTool == fmi2_true)
+            cap[0] = capability(fmi2_cs_needsExecutionTool);
+        if constexpr (canHandleVariableCommunicationStepSize == fmi2_true)
+            cap[1] = capability(fmi2_cs_canHandleVariableCommunicationStepSize);
+        if constexpr (canInterpolateInputs == fmi2_true)
+            cap[2] = capability(fmi2_cs_canInterpolateInputs);
+        if constexpr (maxOutputDerivativeOrder > 0)
+            cap[3] = capability(fmi2_cs_maxOutputDerivativeOrder)
+                     > maxOutputDerivativeOrder;
+        if constexpr (canRunAsynchronuously == fmi2_true)
+            cap[4] = capability(fmi2_cs_canRunAsynchronuously);
+        if constexpr (canBeInstantiatedOnlyOncePerProcess == fmi2_true)
+            cap[5] = capability(fmi2_cs_canBeInstantiatedOnlyOncePerProcess);
+        if constexpr (canNotUseMemoryManagementFunctions == fmi2_true)
+            cap[6] = capability(fmi2_cs_canNotUseMemoryManagementFunctions);
+        if constexpr (canGetAndSetFMUstate == fmi2_true)
+            cap[7] = capability(fmi2_cs_canGetAndSetFMUstate);
+        if constexpr (canSerializeFMUstate == fmi2_true)
+            cap[8] = capability(fmi2_cs_canSerializeFMUstate);
+        if constexpr (providesDirectionalDerivatives == fmi2_true)
+            cap[9] = capability(fmi2_cs_providesDirectionalDerivatives);
+
+        return cap.all();
     }
 
     ///////////////////////////////////////////////////////////////////////////
