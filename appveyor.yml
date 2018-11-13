@@ -4,7 +4,7 @@ image: Visual Studio 2017
 
 environment:
   matrix:
-    - GENERATOR: "Visual Studio 15"
+    - GENERATOR: "Visual Studio 15" 
       CONFIG: Debug
 
     - GENERATOR: "Visual Studio 15"
@@ -17,11 +17,12 @@ environment:
       CONFIG: Release
 	  
 clone_folder: c:\projects\source
+
 build_script:
-	- mkdir build
-	- cd build
-	- cmake c:\projects\source -G "%GENERATOR%"
-	- cmake --build . --config "%CONFIG%"
+  - mkdir build
+  - cd build
+  - cmake c:\projects\source -G "%GENERATOR%"
+  - cmake --build . --config "%CONFIG%"
 test_script:
-	- ps: cd build
-	- ctest -VV -C "%CONFIG%"
+  - ps: cd build
+  - ctest -VV -C "%CONFIG%"
