@@ -636,7 +636,7 @@ public:
     }
 };
 
-template <bool is_model_exchange = true, bool addon = false>
+template <bool is_model_exchange = true>
 class fmi2_t
 {
 private:
@@ -647,15 +647,15 @@ private:
     }
 
 protected:
-    /** @brief fmu object */
-    std::unique_ptr<fmi2_import_t, decltype(&fmi2_import_free)> _fmu;
+    /** @brief jm callback functions */
+    jm_callbacks _jm_cb;
     /** @brief unique pointer to fmi import contex */
     std::unique_ptr<fmi_import_context_t, decltype(&fmi_import_free_context)>
         _ctx;
+    /** @brief fmu object */
+    std::unique_ptr<fmi2_import_t, decltype(&fmi2_import_free)> _fmu;
     /** @brief fmu callback functions */
     fmi2_callback_functions_t _fmu_cb;
-    /** @brief jm callback functions */
-    jm_callbacks _jm_cb;
 
 public:
     fmi2_t()
@@ -690,10 +690,12 @@ public:
      */
     fmi2_t(const char *fmu_path, const char *ext_dir,
            fmi2_callback_functions_t fmu_cb, jm_callbacks jm_cb, bool extracted)
-        : _fmu{nullptr, [](fmi2_import_t *fmu) { fmi2_import_free(fmu); }},
-          _ctx{nullptr,
-               [](fmi_import_context_t *ctx) { fmi_import_free_context(ctx); }},
-          _fmu_cb{fmu_cb}, _jm_cb{jm_cb}
+        : _jm_cb{jm_cb}, _ctx{nullptr,
+                              [](fmi_import_context_t *ctx) {
+                                  fmi_import_free_context(ctx);
+                              }},
+          _fmu{nullptr, [](fmi2_import_t *fmu) { fmi2_import_free(fmu); }},
+          _fmu_cb{fmu_cb}
     {
         /* Init context */
         _ctx = std::unique_ptr<fmi_import_context_t,
@@ -978,7 +980,7 @@ public:
         return fmi2_import_get_source_file_cs(_fmu.get(), index);
     }
 
-    std::optional<variable_t> get_variable_by_name(const char *name)
+    std::optional<variable_t> get_variable_by_name(const char *name) const
     {
         auto v = fmi2_import_get_variable_by_name(_fmu.get(), name);
         if (!v) {
@@ -987,7 +989,8 @@ public:
         return variable_t{v};
     }
 
-    std::optional<variable_t> get_variable_by_name(const fmi2_string_t &name)
+    std::optional<variable_t>
+    get_variable_by_name(const std::string &name) const
     {
         return get_variable_by_name(name.c_str());
     }
@@ -1087,8 +1090,7 @@ public:
             return {}; // Empty variable list?
         }
 
-        auto input_vl = vl.value().filter_variables(_is_input);
-        return input_vl.value_or({});
+        return vl.value().filter_variables(_is_input, nullptr);
     }
 
     fmi2_boolean_t has_input() const noexcept
@@ -1113,7 +1115,18 @@ public:
 
     size_t number_of_inputs() const noexcept
     {
-        return input_list().value_or(0).size();
+        if (!input_list().has_value()) {
+            return 0;
+        };
+        return input_list().value().size();
+    }
+
+    size_t number_of_outputs() const noexcept
+    {
+        if (!output_list().has_value()) {
+            return 0;
+        };
+        return output_list().value().size();
     }
 
     template <fmi2_boolean_t needsExecutionTool,
@@ -1196,7 +1209,7 @@ public:
 
     void free_instance() noexcept
     {
-        fmi2_import_free(_fmu.get());
+        fmi2_import_free_instance(_fmu.get());
     }
 
     fmi2_string_t get_version() const noexcept
@@ -1235,12 +1248,12 @@ public:
 
     fmi2_status_t terminate() noexcept
     {
-        return fmi2_import_terminate();
+        return fmi2_import_terminate(_fmu.get());
     }
 
     fmi2_status_t reset() noexcept
     {
-        return fmi2_import_reset();
+        return fmi2_import_reset(_fmu.get());
     }
 
     fmi2_status_t set_real(const fmi2_value_reference_t vrs[], size_t nvr,
@@ -1446,7 +1459,7 @@ public:
     typename std::enable_if_t<is_me, fmi2_status_t>
     new_discrete_states(fmi2_event_info_t *event_info) noexcept
     {
-        return fmi2_import_enter_event_mode(_fmu.get(), event_info);
+        return fmi2_import_new_discrete_states(_fmu.get(), event_info);
     }
 
     template <bool is_me = is_model_exchange>
@@ -1498,9 +1511,10 @@ public:
 
     template <bool is_me = is_model_exchange>
     typename std::enable_if_t<is_me, fmi2_status_t>
-    get_derivatives(std::vector<fmi2_real_t> derivatives) const noexcept
+    get_derivatives(std::vector<fmi2_real_t> &derivatives) const noexcept
     {
-        return fmi2_import_get_derivatives(derivatives.data(),
+        assert(derivatives.size() == number_of_continuous_states());
+        return fmi2_import_get_derivatives(_fmu.get(), derivatives.data(),
                                            derivatives.size());
     }
 
@@ -1515,9 +1529,10 @@ public:
 
     template <bool is_me = is_model_exchange>
     typename std::enable_if_t<is_me, fmi2_status_t>
-    get_event_indicators(std::vector<fmi2_real_t> event_indicators) const
+    get_event_indicators(std::vector<fmi2_real_t> &event_indicators) const
         noexcept
     {
+        assert(event_indicators.size() == number_of_event_indicators());
         return fmi2_import_get_event_indicators(
             _fmu.get(), event_indicators.data(), event_indicators.size());
     }
@@ -1531,8 +1546,9 @@ public:
 
     template <bool is_me = is_model_exchange>
     typename std::enable_if_t<is_me, fmi2_status_t>
-    get_continuous_states(std::vector<fmi2_real_t> states) const noexcept
+    get_continuous_states(std::vector<fmi2_real_t> &states) const noexcept
     {
+        assert(states.size() == number_of_continuous_states());
         return fmi2_import_get_continuous_states(_fmu.get(), states.data(),
                                                  states.size());
     }
@@ -1546,6 +1562,15 @@ public:
                                                              x_nominal, nx);
     }
 
+    template <bool is_me = is_model_exchange>
+    typename std::enable_if_t<is_me, fmi2_status_t>
+    get_nominals_of_continuous_states(std::vector<fmi2_real_t> &x_nominal) const
+        noexcept
+    {
+        assert(x_nominal.size() == number_of_continuous_states());
+        return fmi2_import_get_nominals_of_continuous_states(
+            _fmu.get(), x_nominal.data(), x_nominal.size());
+    }
     ///////////////////////////////////////////////////////////////////////////
     //  CoSimulation API
     ///////////////////////////////////////////////////////////////////////////
@@ -1589,7 +1614,7 @@ public:
     {
         assert((vrs.size() == order.size()) && (vrs.size() == value.size()));
 
-        return fmi2_import_get_real_input_derivatives(
+        return fmi2_import_get_real_output_derivatives(
             _fmu.get(), vrs.data(), vrs.size(), order.data(), value.data());
     }
 
@@ -1605,7 +1630,7 @@ public:
             fmi2_real_t communication_step_size,
             fmi2_boolean_t new_step) noexcept
     {
-        return fmi2_import_do_step(current_communication_point,
+        return fmi2_import_do_step(_fmu.get(), current_communication_point,
                                    communication_step_size, new_step);
     }
 
