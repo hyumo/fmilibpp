@@ -1,6 +1,8 @@
 
 # fmilib++
 
+[![Build status](https://ci.appveyor.com/api/projects/status/dbx5a4ht9o0noqu9/branch/develop?svg=true)](https://ci.appveyor.com/project/hyumo/fmilibpp/branch/develop)
+
 A header only modern c++ wrapper for FMILibrary. Still WIP.
 
 C++17 compiler is required. 
