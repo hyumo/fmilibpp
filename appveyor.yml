@@ -24,5 +24,4 @@ build_script:
   - cmake c:\projects\source -G "%GENERATOR%"
   - cmake --build . --config "%CONFIG%"
 test_script:
-  - ps: cd build
   - ctest -VV -C "%CONFIG%"
