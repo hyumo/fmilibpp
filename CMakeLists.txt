@@ -1,6 +1,4 @@
-
-
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.8)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules")
 
@@ -52,11 +50,10 @@ else()
 endif()
 
 include(ExternalProject)
-
 set(FMIL_SETTINGS 
 	"-DFMILibrary_SOURCE_DIR:PATH=${CMAKE_SOURCE_DIR}/3rdparty/FMILibrary-2.0.3"
 	"-DFMILibrary_BINARY_DIR:PATH=${CMAKE_BINARY_DIR}/FMILibrary-2.0.3"
-	"-DFMILIB_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}/FMILibrary-2.0.3/fmilib"
+	"-DFMILIB_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}/FMILibrary-2.0.3/Install"
 	"-DFMILIB_FMI_PLATFORM:STRING=${FMILIBRARY_CPP_PLATFORM}"
 	"-DFMILIB_DEFAULT_BUILD_TYPE_RELEASE:BOOLEAN=ON"
 	"-DFMILIB_BUILD_STATIC_LIB:BOOLEAN=ON"
@@ -73,21 +70,12 @@ ExternalProject_Add(
 	GIT_TAG "master"
 	SOURCE_DIR "${CMAKE_SOURCE_DIR}/3rdparty/FMILibrary-2.0.3"
 	BINARY_DIR "${CMAKE_BINARY_DIR}/FMILibrary-2.0.3"
+	INSTALL_DIR "${CMAKE_BINARY_DIR}/FMILibrary-2.0.3/Install"
 	CMAKE_CACHE_ARGS ${FMIL_SETTINGS}
 )
 
-ExternalProject_Add_Step(
-	FMILibrary fmilib_install
-	DEPENDEES install 
-	COMMAND ${CMAKE_COMMAND} -E echo "Running:  ${CMAKE_COMMAND} ${FMIL_SETTINGS} -G ${CMAKE_GENERATOR} ${CMAKE_SOURCE_DIR}/3rdparty/FMILibrary-2.0.3"
-	COMMAND ${CMAKE_COMMAND} ${FMIL_SETTINGS} -G "${CMAKE_GENERATOR}" "${CMAKE_SOURCE_DIR}/3rdparty/FMILibrary-2.0.3"
-	DEPENDS ${CMAKE_BINARY_DIR}/CMakeCache.txt ${CMAKE_SOURCE_DIR}/CMakeLists.txt
-	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/FMILibrary-2.0.3"
-)
-
-set(FMILibrary_ROOT ${CMAKE_BINARY_DIR}/FMILibrary-2.0.3/fmilib)
-set(FMILibrary_LIBRARY_DIRS ${CMAKE_BINARY_DIR}/FMILibrary-2.0.3/fmilib/lib)
-set(FMILibrary_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/FMILibrary-2.0.3/fmilib/include)
+set(FMILibrary_LIBRARY_DIRS ${CMAKE_BINARY_DIR}/FMILibrary-2.0.3/Install/lib)
+set(FMILibrary_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/FMILibrary-2.0.3/Install/include)
 set(fmilib_name "${FMILibrary_LIBRARY_DIRS}/${CMAKE_STATIC_LIBRARY_PREFIX}fmilib${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
 add_library(fmilib STATIC IMPORTED)
@@ -97,13 +85,6 @@ set_target_properties(
 )
 add_dependencies(fmilib FMILibrary)
 
-####################################################################
-# Generate config files
-####################################################################
-
-####################################################################
-# 
-####################################################################
 add_library(fmilib++ INTERFACE)
 
 target_link_libraries(fmilib++ INTERFACE fmilib)
