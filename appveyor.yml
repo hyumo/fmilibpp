@@ -15,7 +15,7 @@ environment:
 
     - GENERATOR: "Visual Studio 15 Win64"
       CONFIG: Release
-	  
+
 clone_folder: c:\projects\source
 
 build_script:
