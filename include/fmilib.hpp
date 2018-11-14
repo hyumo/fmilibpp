@@ -1506,7 +1506,7 @@ public:
     typename std::enable_if_t<is_me, fmi2_status_t>
     get_derivatives(fmi2_real_t derivatives[], size_t nx) const noexcept
     {
-        return fmi2_import_get_derivatives(derivatives, nx);
+        return fmi2_import_get_derivatives(_fmu.get(), derivatives, nx);
     }
 
     template <bool is_me = is_model_exchange>
