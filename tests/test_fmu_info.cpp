@@ -14,6 +14,7 @@ namespace fs = std::filesystem;
 
 std::string fmu_path;
 std::string temp_dir;
+std::string id;
 
 namespace
 {
@@ -24,21 +25,16 @@ jm_callbacks jm_cb
        nullptr};
 }
 
-TEST_CASE("fmu2_me_t ctor", "[CoupledClutches]")
+TEST_CASE("fmu2_me_t ctor", "[.][me]")
 {
     auto ext_dir = fs::path(temp_dir) / "CoupledClutches";
     fs::create_directory(ext_dir);
 
+    REQUIRE(fs::exists(fmu_path));
+
     SECTION("Default constructor should not throw")
     {
         CHECK_NOTHROW(fmilib::fmi2_me_t{});
-        CHECK_NOTHROW(fmilib::fmi2_cs_t{});
-    }
-
-    SECTION("Construct  ME-FMU as CS-FMU should throw")
-    {
-        CHECK_THROWS(fmilib::fmi2_cs_t{fmu_path, ext_dir.string(), ::fmu_cb,
-                                       ::jm_cb, false});
     }
 
     SECTION("Construct ME-FMU object")
@@ -47,14 +43,50 @@ TEST_CASE("fmu2_me_t ctor", "[CoupledClutches]")
                                         ::jm_cb, false});
     }
 
-    SECTION("Construct  ME-FMU with extracted = true")
+    SECTION("Construct ME-FMU as CS-FMU should throw")
+    {
+        CHECK_THROWS(fmilib::fmi2_cs_t{fmu_path, ext_dir.string(), ::fmu_cb,
+                                       ::jm_cb, false});
+    }
+
+    SECTION("Construct ME-FMU with extracted = true")
     {
         CHECK_NOTHROW(fmilib::fmi2_me_t{fmu_path, ext_dir.string(), ::fmu_cb,
                                         ::jm_cb, true});
     }
 }
 
-TEST_CASE("fmi2_t info", "[CoupledClutches]")
+TEST_CASE("fmu2_cs_t ctor", "[.][cs]")
+{
+    auto ext_dir = fs::path(temp_dir) / "CoupledClutches";
+    fs::create_directory(ext_dir);
+    REQUIRE(fs::exists(fmu_path));
+
+    SECTION("Default ctor should not throw")
+    {
+        CHECK_NOTHROW(fmilib::fmi2_cs_t{});
+    }
+
+    SECTION("Construct ME-FMU object")
+    {
+        CHECK_NOTHROW(fmilib::fmi2_cs_t{fmu_path, ext_dir.string(), ::fmu_cb,
+                                        ::jm_cb, false});
+    }
+
+    SECTION("Construct CS-FMU as ME-FMU should throw")
+    {
+        CHECK_THROWS(fmilib::fmi2_me_t{fmu_path, ext_dir.string(), ::fmu_cb,
+                                       ::jm_cb, false});
+    }
+
+    SECTION("Construct CS-FMU object with extracted = true")
+    {
+        CHECK_NOTHROW(fmilib::fmi2_cs_t{fmu_path, ext_dir.string(), ::fmu_cb,
+                                        ::jm_cb, true});
+    }
+}
+
+TEST_CASE("fmi2_t info", "[.][CoupledClutches]")
 {
     auto ext_dir = fs::path(temp_dir) / "CoupledClutches";
     fs::create_directory(ext_dir);
@@ -65,17 +97,15 @@ TEST_CASE("fmi2_t info", "[CoupledClutches]")
     {
         // fmiModelDescription
         CHECK(std::string{m.model_name()} == "CoupledClutches");
-        CHECK(std::string{m.GUID()}
-              == "{2f3acb46-bfc5-4533-bbaf-312bd1b4b8d8}");
         CHECK(std::string{m.description()}
               == "Drive train with 3 dynamically coupled clutches");
         CHECK(std::string{m.author()} == "");
         CHECK(std::string{m.license()} == "");
         CHECK(std::string{m.standard_version()} == "2.0");
-        CHECK(std::string{m.generation_tool()}
-              == "Dymola Version 2017 (64-bit), 2016-06-23");
-        CHECK(std::string{m.generation_date_and_time()}
-              == "2016-07-05T12:33:41Z");
+        //CHECK(std::string{m.generation_tool()}
+        //      == "Dymola Version 2017 (64-bit), 2016-06-23");
+        //CHECK(std::string{m.generation_date_and_time()}
+        //      == "2016-07-05T12:33:41Z");
         CHECK(m.naming_convention() == fmi2_naming_enu_structured);
 
         // fmiModelDescription/ModelExchange
@@ -118,8 +148,10 @@ int main(int argc, char *argv[])
     using namespace Catch::clara;
     Catch::Session session;
     auto cli = session.cli() // Append options
+               | Opt(id, "id")["--id"]("FMU id")
                | Opt(fmu_path, "fmu")["--fmu"]("FMU directory")
                | Opt(temp_dir, "temp")["--temp"]("Temp directory");
+
     session.cli(cli);
     int result = session.applyCommandLine(argc, argv);
     if (result != 0) // Indicates a command line error

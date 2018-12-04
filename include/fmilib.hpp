@@ -1450,41 +1450,41 @@ public:
     //  ModelExchange API
     ///////////////////////////////////////////////////////////////////////////
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t> enter_event_mode() noexcept
+    std::enable_if_t<is_me, fmi2_status_t> enter_event_mode() noexcept
     {
         return fmi2_import_enter_event_mode(_fmu.get());
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     new_discrete_states(fmi2_event_info_t *event_info) noexcept
     {
         return fmi2_import_new_discrete_states(_fmu.get(), event_info);
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     enter_continuous_time_mode() noexcept
     {
         return fmi2_import_enter_continuous_time_mode(_fmu.get());
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     set_time(fmi2_real_t time) noexcept
     {
         return fmi2_import_set_time(_fmu.get(), time);
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     set_continuous_states(const fmi2_real_t x[], size_t nx) noexcept
     {
         return fmi2_import_set_continuous_states(_fmu.get(), x, nx);
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     set_continuous_states(const std::vector<fmi2_real_t> &x) noexcept
     {
         return fmi2_import_set_continuous_states(_fmu.get(), x.data(),
@@ -1492,7 +1492,7 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t> completed_integrator_step(
+    std::enable_if_t<is_me, fmi2_status_t> completed_integrator_step(
         fmi2_boolean_t no_set_fmu_state_prior_to_current_point,
         fmi2_boolean_t *enter_event_mode,
         fmi2_boolean_t *terminate_simulation) noexcept
@@ -1503,14 +1503,14 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     get_derivatives(fmi2_real_t derivatives[], size_t nx) const noexcept
     {
         return fmi2_import_get_derivatives(_fmu.get(), derivatives, nx);
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     get_derivatives(std::vector<fmi2_real_t> &derivatives) const noexcept
     {
         assert(derivatives.size() == number_of_continuous_states());
@@ -1519,7 +1519,7 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     get_event_indicators(fmi2_real_t event_indicators[], size_t ni) const
         noexcept
     {
@@ -1528,7 +1528,7 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     get_event_indicators(std::vector<fmi2_real_t> &event_indicators) const
         noexcept
     {
@@ -1538,14 +1538,14 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     get_continuous_states(fmi2_real_t states[], size_t nx) const noexcept
     {
         return fmi2_import_get_continuous_states(_fmu.get(), states, nx);
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     get_continuous_states(std::vector<fmi2_real_t> &states) const noexcept
     {
         assert(states.size() == number_of_continuous_states());
@@ -1554,7 +1554,7 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     get_nominals_of_continuous_states(fmi2_real_t x_nominal[], size_t nx) const
         noexcept
     {
@@ -1563,7 +1563,7 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    typename std::enable_if_t<is_me, fmi2_status_t>
+    std::enable_if_t<is_me, fmi2_status_t>
     get_nominals_of_continuous_states(std::vector<fmi2_real_t> &x_nominal) const
         noexcept
     {
@@ -1575,7 +1575,7 @@ public:
     //  CoSimulation API
     ///////////////////////////////////////////////////////////////////////////
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t>
+    std::enable_if_t<is_cs, fmi2_status_t>
     set_real_input_derivatives(const fmi2_value_reference_t vr[], size_t nvr,
                                const fmi2_integer_t order[],
                                const fmi2_real_t value[]) noexcept
@@ -1585,7 +1585,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t>
+    std::enable_if_t<is_cs, fmi2_status_t>
     set_real_input_derivatives(const std::vector<fmi2_value_reference_t> &vrs,
                                const std::vector<fmi2_integer_t> &order,
                                const std::vector<fmi2_real_t> &value) noexcept
@@ -1597,7 +1597,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t>
+    std::enable_if_t<is_cs, fmi2_status_t>
     get_real_output_derivatives(const fmi2_value_reference_t vr[], size_t nvr,
                                 const fmi2_integer_t order[],
                                 fmi2_real_t value[]) const noexcept
@@ -1607,7 +1607,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t>
+    std::enable_if_t<is_cs, fmi2_status_t>
     get_real_output_derivatives(const std::vector<fmi2_value_reference_t> &vrs,
                                 const std::vector<fmi2_integer_t> &order,
                                 std::vector<fmi2_real_t> &value) const noexcept
@@ -1619,13 +1619,13 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t> cancel_step() noexcept
+    std::enable_if_t<is_cs, fmi2_status_t> cancel_step() noexcept
     {
         return fmi2_import_cancel_step(_fmu.get());
     }
 
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t>
+    std::enable_if_t<is_cs, fmi2_status_t>
     do_step(fmi2_real_t current_communication_point,
             fmi2_real_t communication_step_size,
             fmi2_boolean_t new_step) noexcept
@@ -1635,14 +1635,14 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t>
+    std::enable_if_t<is_cs, fmi2_status_t>
     get_status(const fmi2_status_kind_t s, fmi2_status_t *value) const noexcept
     {
         return fmi2_import_get_status(_fmu.get(), s, value);
     }
 
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t>
+    std::enable_if_t<is_cs, fmi2_status_t>
     get_real_status(const fmi2_status_kind_t s, fmi2_real_t *value) const
         noexcept
     {
@@ -1650,7 +1650,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t>
+    std::enable_if_t<is_cs, fmi2_status_t>
     get_integer_status(const fmi2_status_kind_t s, fmi2_integer_t *value) const
         noexcept
     {
@@ -1658,7 +1658,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t>
+    std::enable_if_t<is_cs, fmi2_status_t>
     get_boolean_status(const fmi2_status_kind_t s, fmi2_boolean_t *value) const
         noexcept
     {
@@ -1666,7 +1666,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    typename std::enable_if_t<is_cs, fmi2_status_t>
+    std::enable_if_t<is_cs, fmi2_status_t>
     get_string_status(const fmi2_status_kind_t s, fmi2_string_t *value) const
         noexcept
     {
