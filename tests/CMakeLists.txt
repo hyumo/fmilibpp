@@ -15,13 +15,6 @@ file(MAKE_DIRECTORY ${TEMP_DIR})
 add_executable(test_fmu_me test_fmu_me.cpp)
 add_test(
 	NAME "test_fmu_me_CoupledClutches"
-	COMMAND test_fmu_me --id=CoupledClutches --fmu=${CoupledClutch} --temp=${TEMP_DIR} -s
+	COMMAND test_fmu_me [CoupledClutches] --id=CoupledClutches --fmu=${CoupledClutch} --temp=${TEMP_DIR} -s
 	WORKING_DIRECTORY ${TEMP_DIR}
 )
-
-#add_executable(test_fmu_cs test_fmu_cs.cpp)
-#add_test(
-#	NAME "test_fmu_cs_CoupledClutches"
-#	COMMAND test_fmu_cs --id=CoupledClutches --fmu=${CoupledClutch} --temp=${TEMP_DIR} -s
-#	WORKING_DIRECTORY ${TEMP_DIR}
-#)

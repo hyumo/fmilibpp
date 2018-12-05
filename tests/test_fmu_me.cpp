@@ -25,7 +25,7 @@ jm_callbacks jm_cb
        nullptr};
 } // namespace
 
-TEST_CASE("fmu2_me_t ctor")
+TEST_CASE("fmu2_me_t ctor", "[.]")
 {
     auto ext_dir = fs::path(temp_dir) / id;
     fs::create_directory(ext_dir);
@@ -56,14 +56,14 @@ TEST_CASE("fmu2_me_t ctor")
     }
 }
 
-TEST_CASE("fmu2_me_t initialization")
+TEST_CASE("fmu2_me_t initialization", "[.]")
 {
     auto ext_dir = fs::path(temp_dir) / id;
     fs::create_directory(ext_dir);
 
     REQUIRE(fs::exists(fmu_path));
 
-    SECTION("Regular argumetns")
+    SECTION("Test init with regular argumetns")
     {
         fmilib::fmi2_me_t m{fmu_path, ext_dir.string(), ::fmu_cb, ::jm_cb};
         REQUIRE(
@@ -74,18 +74,19 @@ TEST_CASE("fmu2_me_t initialization")
         REQUIRE(fmi2_status_ok == m.enter_initialization_mode());
         REQUIRE(fmi2_status_ok == m.exit_initialization_mode());
 
+        m.terminate();
         m.free_instance();
     }
 }
 
-TEST_CASE("fmu2_me_t enter continuous time mode")
+TEST_CASE("fmu2_me_t test initialization", "[.]")
 {
     auto ext_dir = fs::path(temp_dir) / id;
     fs::create_directory(ext_dir);
 
     REQUIRE(fs::exists(fmu_path));
 
-    SECTION("Regular argumetns")
+    SECTION("Before entering continuous time mode")
     {
         fmilib::fmi2_me_t m{fmu_path, ext_dir.string(), ::fmu_cb, ::jm_cb};
         fmi2_event_info_t event_info{fmi2_true,  fmi2_false, fmi2_false,
@@ -104,6 +105,109 @@ TEST_CASE("fmu2_me_t enter continuous time mode")
             CHECK(fmi2_status_ok == m.new_discrete_states(&event_info));
         }
         CHECK(fmi2_status_ok == m.enter_continuous_time_mode());
+
+        m.terminate();
+        m.free_instance();
+    }
+}
+
+TEST_CASE("State Machine of Calling Sequence: CoupledClutches",
+          "[.][CoupledClutches]")
+{
+    auto ext_dir = fs::path(temp_dir) / id;
+    fs::create_directory(ext_dir);
+
+    REQUIRE(fs::exists(fmu_path));
+
+    SECTION("Change parameter values before setup experiment should return ok")
+    {
+        fmilib::fmi2_me_t m{fmu_path, ext_dir.string(), ::fmu_cb, ::jm_cb};
+        REQUIRE(
+            jm_status_success
+            == m.instantiate(id.c_str(), fmi2_model_exchange, "", fmi2_false));
+        auto J1 = m.get_variable_by_name("J1.J");
+        auto J2 = m.get_variable_by_name("J2.J");
+        REQUIRE(J1.has_value());
+        REQUIRE(J2.has_value());
+        std::vector<fmi2_value_reference_t> vrs{J1.value().vr(),
+                                                J2.value().vr()};
+        std::vector<fmi2_real_t> values{10.0, 10.0};
+        REQUIRE(fmi2_status_ok == m.set_real(vrs, values));
+        REQUIRE(fmi2_status_ok
+                == m.setup_experiment(fmi2_true, 1e-05, 0.0, fmi2_true, 1.0));
+        REQUIRE(fmi2_status_ok == m.enter_initialization_mode());
+        REQUIRE(fmi2_status_ok == m.exit_initialization_mode());
+
+        m.terminate();
+        m.free_instance();
+    }
+
+    SECTION("Enter continuous time mode should return ok")
+    {
+        fmilib::fmi2_me_t m{fmu_path, ext_dir.string(), ::fmu_cb, ::jm_cb};
+        fmi2_event_info_t event_info{fmi2_true,  fmi2_false, fmi2_false,
+                                     fmi2_false, fmi2_false, -0.0};
+
+        REQUIRE(
+            jm_status_success
+            == m.instantiate(id.c_str(), fmi2_model_exchange, "", fmi2_false));
+        REQUIRE(fmi2_status_ok
+                == m.setup_experiment(fmi2_true, 1e-05, 0.0, fmi2_true, 1.0));
+        REQUIRE(fmi2_status_ok == m.enter_initialization_mode());
+        REQUIRE(fmi2_status_ok == m.exit_initialization_mode());
+
+        event_info.newDiscreteStatesNeeded = fmi2_true;
+        while (event_info.newDiscreteStatesNeeded
+               && !event_info.terminateSimulation) {
+            CHECK(fmi2_status_ok == m.new_discrete_states(&event_info));
+        }
+        CHECK(fmi2_true == event_info.nextEventTimeDefined);
+        CHECK(0.4 == Approx(event_info.nextEventTime));
+        CHECK(fmi2_status_ok == m.enter_continuous_time_mode());
+        m.terminate();
+        m.free_instance();
+    }
+
+    SECTION("Do euler integration before next event happens")
+    {
+        fmilib::fmi2_me_t m{fmu_path, ext_dir.string(), ::fmu_cb, ::jm_cb};
+        fmi2_event_info_t event_info{fmi2_true,  fmi2_false, fmi2_false,
+                                     fmi2_false, fmi2_false, -0.0};
+
+        REQUIRE(
+            jm_status_success
+            == m.instantiate(id.c_str(), fmi2_model_exchange, "", fmi2_false));
+        REQUIRE(fmi2_status_ok
+                == m.setup_experiment(fmi2_true, 1e-05, 0.0, fmi2_true, 1.0));
+        REQUIRE(fmi2_status_ok == m.enter_initialization_mode());
+        REQUIRE(fmi2_status_ok == m.exit_initialization_mode());
+
+        event_info.newDiscreteStatesNeeded = fmi2_true;
+        while (event_info.newDiscreteStatesNeeded
+               && !event_info.terminateSimulation) {
+            CHECK(fmi2_status_ok == m.new_discrete_states(&event_info));
+        }
+        CHECK(fmi2_true == event_info.nextEventTimeDefined);
+        CHECK(0.4 == Approx(event_info.nextEventTime));
+        CHECK(fmi2_status_ok == m.enter_continuous_time_mode());
+
+        const auto h = 0.001;
+        std::vector<double> x(m.number_of_continuous_states());
+        std::vector<double> x_dot(m.number_of_continuous_states());
+        std::vector<double> x_next(m.number_of_continuous_states());
+        for (int i = 0; i < 400; ++i) {
+            double time = i * h;
+            CAPTURE(time);
+            CHECK(fmi2_status_ok == m.set_time(time));
+            CHECK(fmi2_status_ok == m.get_continuous_states(x));
+            CHECK(fmi2_status_ok == m.get_derivatives(x_dot));
+            for (decltype(x.size()) j = 0; j < x.size(); ++j) {
+                x_next[j] = x[j] + h * x_dot[j];
+            }
+            CHECK(fmi2_status_ok == m.set_continuous_states(x_next));
+        }
+
+        m.terminate();
         m.free_instance();
     }
 }
