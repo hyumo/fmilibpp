@@ -31,6 +31,7 @@
 
 #include <algorithm>
 #include <array>
+#include <assert.h>
 #include <bitset>
 #include <memory>
 #include <optional>
@@ -739,6 +740,11 @@ public:
             _fmu_cb.componentEnvironment = _fmu.get();
         }
 
+        if (extracted) {
+            fmu_cb.logger(_fmu.get(), model_name(), fmi2_status_warning,
+                          nullptr, "GUID - %s\n", GUID());
+        }
+
         if constexpr (is_model_exchange) {
             jm_stat = fmi2_import_create_dllfmu(_fmu.get(), fmi2_fmu_kind_me,
                                                 &_fmu_cb);
@@ -1005,6 +1011,19 @@ public:
         return variable_t{v};
     }
 
+    std::optional<std::vector<fmi2_value_reference_t>>
+    get_vrs_by_names(const std::vector<std::string> &names) const
+    {
+        std::vector<fmi2_value_reference_t> vrs;
+        for (auto &n : names) {
+            auto v = get_variable_by_name(n);
+            if (!v) {
+                return {};
+            }
+            vrs.push_back(v.value().vr());
+        }
+        return vrs;
+    }
     std::optional<variable_list_t> output_list() const noexcept
     {
         auto vl = fmi2_import_get_outputs_list(_fmu.get());
@@ -1021,6 +1040,39 @@ public:
             return {};
         }
         return variable_list_t{vl};
+    }
+
+    std::optional<std::vector<std::string>> state_names() const noexcept
+    {
+        std::vector<std::string> states;
+        auto der_vl = fmi2_import_get_derivatives_list(_fmu.get());
+        if (!der_vl) {
+            return {};
+        }
+        auto ders = variable_list_t{der_vl};
+
+        for (std::size_t i = 0; i < ders.size(); ++i) {
+            auto d = ders[i];
+            if (d.has_value()) {
+                auto real_var
+                    = (fmi2_import_real_variable_t *)d.value().c_ptr();
+                auto var = (fmi2_import_variable_t *)
+                    fmi2_import_get_real_variable_derivative_of(real_var);
+                states.push_back(
+                    std::string(fmi2_import_get_variable_name(var)));
+            }
+        }
+        return states;
+    }
+
+    std::optional<std::vector<fmi2_value_reference_t>> state_vrs() const
+        noexcept
+    {
+        if (auto names = state_names(); names.has_value()) {
+            return get_vrs_by_names(names.value());
+        } else {
+            return {};
+        }
     }
 
     std::optional<variable_list_t> discrete_states_list() const noexcept
@@ -1256,6 +1308,26 @@ public:
         return fmi2_import_reset(_fmu.get());
     }
 
+    /**
+     * @brief Set single real value through variable name
+     *
+     */
+    template <bool pedantic = false>
+    fmi2_status_t set_real(const char *name, const fmi2_real_t &value) noexcept
+    {
+        fmi2_value_reference_t vr = 0;
+        if constexpr (pedantic) {
+            auto v = get_variable_by_name(name);
+            if (!v) {
+                return fmi2_status_error;
+            }
+            vr = v.value().vr();
+        } else {
+            vr = get_variable_by_name(name).value().vr();
+        }
+        return fmi2_import_set_real(_fmu.get(), &vr, 1, &value);
+    }
+
     fmi2_status_t set_real(const fmi2_value_reference_t vrs[], size_t nvr,
                            const fmi2_real_t value[]) noexcept
     {
@@ -1268,6 +1340,23 @@ public:
         assert(vrs.size() == values.size());
         return fmi2_import_set_real(_fmu.get(), vrs.data(), vrs.size(),
                                     values.data());
+    }
+
+    template <bool pedantic = false>
+    fmi2_status_t set_integer(const char *name,
+                              const fmi2_integer_t &value) noexcept
+    {
+        fmi2_value_reference_t vr = 0;
+        if constexpr (pedantic) {
+            auto v = get_variable_by_name(name);
+            if (!v) {
+                return fmi2_status_error;
+            }
+            vr = v.value().vr();
+        } else {
+            vr = get_variable_by_name(name).value().vr();
+        }
+        return fmi2_import_set_integer(_fmu.get(), &vr, 1, &value);
     }
 
     fmi2_status_t set_integer(const fmi2_value_reference_t vrs[], size_t nvr,
@@ -1285,6 +1374,23 @@ public:
                                        values.data());
     }
 
+    template <bool pedantic = false>
+    fmi2_status_t set_boolean(const char *name,
+                              const fmi2_boolean_t &value) noexcept
+    {
+        fmi2_value_reference_t vr = 0;
+        if constexpr (pedantic) {
+            auto v = get_variable_by_name(name);
+            if (!v) {
+                return fmi2_status_error;
+            }
+            vr = v.value().vr();
+        } else {
+            vr = get_variable_by_name(name).value().vr();
+        }
+        return fmi2_import_set_boolean(_fmu.get(), &vr, 1, &value);
+    }
+
     fmi2_status_t set_boolean(const fmi2_value_reference_t vrs[], size_t nvr,
                               const fmi2_boolean_t values[]) noexcept
     {
@@ -1298,6 +1404,23 @@ public:
         assert(vrs.size() == values.size());
         return fmi2_import_set_boolean(_fmu.get(), vrs.data(), vrs.size(),
                                        values.data());
+    }
+
+    template <bool pedantic = false>
+    fmi2_status_t set_string(const char *name,
+                             const fmi2_string_t &value) noexcept
+    {
+        fmi2_value_reference_t vr = 0;
+        if constexpr (pedantic) {
+            auto v = get_variable_by_name(name);
+            if (!v) {
+                return fmi2_status_error;
+            }
+            vr = v.value().vr();
+        } else {
+            vr = get_variable_by_name(name).value().vr();
+        }
+        return fmi2_import_set_string(_fmu.get(), &vr, 1, &value);
     }
 
     fmi2_status_t set_string(const fmi2_value_reference_t vrs[], size_t nvr,
@@ -1314,6 +1437,26 @@ public:
                                       values.data());
     }
 
+    /**
+     * @brief Set single real value through variable name
+     *
+     */
+    template <bool pedantic = false>
+    fmi2_status_t get_real(const char *name, fmi2_real_t &value) const noexcept
+    {
+        fmi2_value_reference_t vr = 0;
+        if constexpr (pedantic) {
+            auto v = get_variable_by_name(name);
+            if (!v) {
+                return fmi2_status_error;
+            }
+            vr = v.value().vr();
+        } else {
+            vr = get_variable_by_name(name).value().vr();
+        }
+        return fmi2_import_get_real(_fmu.get(), &vr, 1, &value);
+    }
+
     fmi2_status_t get_real(const fmi2_value_reference_t vrs[], size_t nvr,
                            fmi2_real_t value[]) const noexcept
     {
@@ -1326,6 +1469,23 @@ public:
         assert(vrs.size() == values.size());
         return fmi2_import_get_real(_fmu.get(), vrs.data(), vrs.size(),
                                     values.data());
+    }
+
+    template <bool pedantic = false>
+    fmi2_status_t get_integer(const char *name, fmi2_integer_t &value) const
+        noexcept
+    {
+        fmi2_value_reference_t vr = 0;
+        if constexpr (pedantic) {
+            auto v = get_variable_by_name(name);
+            if (!v) {
+                return fmi2_status_error;
+            }
+            vr = v.value().vr();
+        } else {
+            vr = get_variable_by_name(name).value().vr();
+        }
+        return fmi2_import_get_integer(_fmu.get(), &vr, 1, &value);
     }
 
     fmi2_status_t get_integer(const fmi2_value_reference_t vrs[], size_t nvr,
@@ -1343,6 +1503,23 @@ public:
                                        values.data());
     }
 
+    template <bool pedantic = false>
+    fmi2_status_t get_boolean(const char *name, fmi2_boolean_t &value) const
+        noexcept
+    {
+        fmi2_value_reference_t vr = 0;
+        if constexpr (pedantic) {
+            auto v = get_variable_by_name(name);
+            if (!v) {
+                return fmi2_status_error;
+            }
+            vr = v.value().vr();
+        } else {
+            vr = get_variable_by_name(name).value().vr();
+        }
+        return fmi2_import_get_boolean(_fmu.get(), &vr, 1, &value);
+    }
+
     fmi2_status_t get_boolean(const fmi2_value_reference_t vrs[], size_t nvr,
                               fmi2_boolean_t value[]) const noexcept
     {
@@ -1356,6 +1533,23 @@ public:
         assert(vrs.size() == values.size());
         return fmi2_import_get_boolean(_fmu.get(), vrs.data(), vrs.size(),
                                        values.data());
+    }
+
+    template <bool pedantic = false>
+    fmi2_status_t get_string(const char *name, fmi2_string_t &value) const
+        noexcept
+    {
+        fmi2_value_reference_t vr = 0;
+        if constexpr (pedantic) {
+            auto v = get_variable_by_name(name);
+            if (!v) {
+                return fmi2_status_error;
+            }
+            vr = v.value().vr();
+        } else {
+            vr = get_variable_by_name(name).value().vr();
+        }
+        return fmi2_import_get_string(_fmu.get(), &vr, 1, &value);
     }
 
     fmi2_status_t get_string(const fmi2_value_reference_t vrs[], size_t nvr,
@@ -1418,7 +1612,7 @@ public:
         return fmi2_import_de_serialize_fmu_state(_fmu.get(), data, sz, s);
     }
 
-    fmi2_status_t de_serialize_fmu_state(const std::vector<fmi2_byte_t> data,
+    fmi2_status_t de_serialize_fmu_state(const std::vector<fmi2_byte_t> &data,
                                          fmi2_FMU_state_t *s) const noexcept
     {
         return fmi2_import_de_serialize_fmu_state(_fmu.get(), data.data(),
@@ -1432,7 +1626,7 @@ public:
         noexcept
     {
         return fmi2_import_get_directional_derivative(_fmu.get(), v_ref, nv,
-                                                      z_ref, dv, dz);
+                                                      z_ref, nz, dv, dz);
     }
 
     fmi2_status_t
@@ -1443,48 +1637,48 @@ public:
     {
         return fmi2_import_get_directional_derivative(
             _fmu.get(), v_ref.data(), v_ref.size(), z_ref.data(), z_ref.size(),
-            dz.data());
+            dv.data(), dz.data());
     }
 
     ///////////////////////////////////////////////////////////////////////////
     //  ModelExchange API
     ///////////////////////////////////////////////////////////////////////////
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t> enter_event_mode() noexcept
+    typename std::enable_if_t<is_me, fmi2_status_t> enter_event_mode() noexcept
     {
         return fmi2_import_enter_event_mode(_fmu.get());
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     new_discrete_states(fmi2_event_info_t *event_info) noexcept
     {
         return fmi2_import_new_discrete_states(_fmu.get(), event_info);
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     enter_continuous_time_mode() noexcept
     {
         return fmi2_import_enter_continuous_time_mode(_fmu.get());
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     set_time(fmi2_real_t time) noexcept
     {
         return fmi2_import_set_time(_fmu.get(), time);
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     set_continuous_states(const fmi2_real_t x[], size_t nx) noexcept
     {
         return fmi2_import_set_continuous_states(_fmu.get(), x, nx);
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     set_continuous_states(const std::vector<fmi2_real_t> &x) noexcept
     {
         return fmi2_import_set_continuous_states(_fmu.get(), x.data(),
@@ -1492,7 +1686,7 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t> completed_integrator_step(
+    typename std::enable_if_t<is_me, fmi2_status_t> completed_integrator_step(
         fmi2_boolean_t no_set_fmu_state_prior_to_current_point,
         fmi2_boolean_t *enter_event_mode,
         fmi2_boolean_t *terminate_simulation) noexcept
@@ -1503,14 +1697,14 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     get_derivatives(fmi2_real_t derivatives[], size_t nx) const noexcept
     {
         return fmi2_import_get_derivatives(_fmu.get(), derivatives, nx);
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     get_derivatives(std::vector<fmi2_real_t> &derivatives) const noexcept
     {
         assert(derivatives.size() == number_of_continuous_states());
@@ -1519,7 +1713,7 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     get_event_indicators(fmi2_real_t event_indicators[], size_t ni) const
         noexcept
     {
@@ -1528,7 +1722,7 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     get_event_indicators(std::vector<fmi2_real_t> &event_indicators) const
         noexcept
     {
@@ -1538,14 +1732,14 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     get_continuous_states(fmi2_real_t states[], size_t nx) const noexcept
     {
         return fmi2_import_get_continuous_states(_fmu.get(), states, nx);
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     get_continuous_states(std::vector<fmi2_real_t> &states) const noexcept
     {
         assert(states.size() == number_of_continuous_states());
@@ -1554,7 +1748,7 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     get_nominals_of_continuous_states(fmi2_real_t x_nominal[], size_t nx) const
         noexcept
     {
@@ -1563,7 +1757,7 @@ public:
     }
 
     template <bool is_me = is_model_exchange>
-    std::enable_if_t<is_me, fmi2_status_t>
+    typename std::enable_if_t<is_me, fmi2_status_t>
     get_nominals_of_continuous_states(std::vector<fmi2_real_t> &x_nominal) const
         noexcept
     {
@@ -1575,7 +1769,7 @@ public:
     //  CoSimulation API
     ///////////////////////////////////////////////////////////////////////////
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t>
+    typename std::enable_if_t<is_cs, fmi2_status_t>
     set_real_input_derivatives(const fmi2_value_reference_t vr[], size_t nvr,
                                const fmi2_integer_t order[],
                                const fmi2_real_t value[]) noexcept
@@ -1585,7 +1779,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t>
+    typename std::enable_if_t<is_cs, fmi2_status_t>
     set_real_input_derivatives(const std::vector<fmi2_value_reference_t> &vrs,
                                const std::vector<fmi2_integer_t> &order,
                                const std::vector<fmi2_real_t> &value) noexcept
@@ -1597,7 +1791,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t>
+    typename std::enable_if_t<is_cs, fmi2_status_t>
     get_real_output_derivatives(const fmi2_value_reference_t vr[], size_t nvr,
                                 const fmi2_integer_t order[],
                                 fmi2_real_t value[]) const noexcept
@@ -1607,7 +1801,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t>
+    typename std::enable_if_t<is_cs, fmi2_status_t>
     get_real_output_derivatives(const std::vector<fmi2_value_reference_t> &vrs,
                                 const std::vector<fmi2_integer_t> &order,
                                 std::vector<fmi2_real_t> &value) const noexcept
@@ -1619,13 +1813,13 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t> cancel_step() noexcept
+    typename std::enable_if_t<is_cs, fmi2_status_t> cancel_step() noexcept
     {
         return fmi2_import_cancel_step(_fmu.get());
     }
 
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t>
+    typename std::enable_if_t<is_cs, fmi2_status_t>
     do_step(fmi2_real_t current_communication_point,
             fmi2_real_t communication_step_size,
             fmi2_boolean_t new_step) noexcept
@@ -1635,14 +1829,14 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t>
+    typename std::enable_if_t<is_cs, fmi2_status_t>
     get_status(const fmi2_status_kind_t s, fmi2_status_t *value) const noexcept
     {
         return fmi2_import_get_status(_fmu.get(), s, value);
     }
 
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t>
+    typename std::enable_if_t<is_cs, fmi2_status_t>
     get_real_status(const fmi2_status_kind_t s, fmi2_real_t *value) const
         noexcept
     {
@@ -1650,7 +1844,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t>
+    typename std::enable_if_t<is_cs, fmi2_status_t>
     get_integer_status(const fmi2_status_kind_t s, fmi2_integer_t *value) const
         noexcept
     {
@@ -1658,7 +1852,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t>
+    typename std::enable_if_t<is_cs, fmi2_status_t>
     get_boolean_status(const fmi2_status_kind_t s, fmi2_boolean_t *value) const
         noexcept
     {
@@ -1666,7 +1860,7 @@ public:
     }
 
     template <bool is_cs = !is_model_exchange>
-    std::enable_if_t<is_cs, fmi2_status_t>
+    typename std::enable_if_t<is_cs, fmi2_status_t>
     get_string_status(const fmi2_status_kind_t s, fmi2_string_t *value) const
         noexcept
     {
